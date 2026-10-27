@@ -20,6 +20,7 @@ use ArchitectureDecisionLab\Foundation\VirtualClock;
 use ArchitectureDecisionLab\Instrumentation\Counters;
 use ArchitectureDecisionLab\Processing\AsyncBookingProcessor;
 use ArchitectureDecisionLab\Processing\JobQueue;
+use ArchitectureDecisionLab\Reporting\TripReport;
 use ArchitectureDecisionLab\Services\BookingWorkflow;
 use ArchitectureDecisionLab\Services\InventoryService;
 use ArchitectureDecisionLab\Services\PaymentService;
@@ -51,6 +52,7 @@ final class Lab
         public readonly BookingWorkflow $workflow,
         public readonly AsyncBookingProcessor $async,
         public readonly JobQueue $queue,
+        public readonly TripReport $tripReport,
         public readonly SqliteDatabase $bookingDb,
         public readonly SqliteDatabase $reportingDb,
         public readonly string $directory,

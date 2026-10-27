@@ -36,6 +36,7 @@ final class AsyncProcessingTest extends LabTestCase
         self::assertSame(2, $rejected);
         self::assertSame(2, $lab->queue->size());
         self::assertSame(2, $lab->counters->get('queueRejections'));
+        self::assertSame(2, $lab->store->countByStatus()['pending'] ?? 0);
     }
 
     public function testWorkerDrainsTheQueueAndReportsCompletionLatency(): void

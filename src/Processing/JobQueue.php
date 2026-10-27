@@ -53,6 +53,11 @@ final class JobQueue
         return count($this->jobs);
     }
 
+    public function isFull(): bool
+    {
+        return count($this->jobs) >= $this->limit;
+    }
+
     public function limit(): int
     {
         return $this->limit;

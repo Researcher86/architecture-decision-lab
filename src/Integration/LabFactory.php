@@ -25,6 +25,9 @@ use ArchitectureDecisionLab\Foundation\VirtualClock;
 use ArchitectureDecisionLab\Instrumentation\Counters;
 use ArchitectureDecisionLab\Processing\AsyncBookingProcessor;
 use ArchitectureDecisionLab\Processing\JobQueue;
+use ArchitectureDecisionLab\Reporting\ServiceTripReport;
+use ArchitectureDecisionLab\Reporting\SqlTripReport;
+use ArchitectureDecisionLab\Reporting\TripReport;
 use ArchitectureDecisionLab\Services\BookingWorkflow;
 use ArchitectureDecisionLab\Services\DirectTransport;
 use ArchitectureDecisionLab\Services\InventoryService;
@@ -32,6 +35,7 @@ use ArchitectureDecisionLab\Services\ModuleTransport;
 use ArchitectureDecisionLab\Services\PaymentService;
 use ArchitectureDecisionLab\Services\RemoteTransport;
 use ArchitectureDecisionLab\Services\Transport;
+use ArchitectureDecisionLab\Storage\BookingStore;
 use ArchitectureDecisionLab\Storage\DocumentBookingStore;
 use ArchitectureDecisionLab\Storage\Schema;
 use ArchitectureDecisionLab\Storage\SqlBookingStore;
@@ -140,6 +144,7 @@ final class LabFactory
 
         $jobQueue = new JobQueue($config->queueLimit, $counters);
         $async = new AsyncBookingProcessor($workflow, $jobQueue, $store, $counters, $clock);
+        $tripReport = self::tripReport($config, $bookingDb, $store, $flight, $hotel, $car);
 
         return new Lab(
             $config,
@@ -159,10 +164,26 @@ final class LabFactory
             $workflow,
             $async,
             $jobQueue,
+            $tripReport,
             $bookingDb,
             $reportingDb,
             $directory,
         );
+    }
+
+    private static function tripReport(
+        LabConfig $config,
+        SqliteDatabase $bookingDb,
+        BookingStore $store,
+        InventoryService $flight,
+        InventoryService $hotel,
+        InventoryService $car,
+    ): TripReport {
+        if ($config->database === DatabaseMode::Shared && $config->storage === StorageMode::Sql) {
+            return new SqlTripReport($bookingDb);
+        }
+
+        return new ServiceTripReport($store, $flight, $hotel, $car);
     }
 
     private static function transport(

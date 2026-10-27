@@ -36,15 +36,33 @@ final readonly class AsyncBookingProcessor
     public function submit(TripRequest $request, int $index = 0): BookingResult
     {
         $startedAt = $this->clock->now();
+
+        if ($this->queue->isFull()) {
+            $this->counters->increment('queueRejections');
+            $this->counters->increment('bookingsRejectedByQueue');
+            $this->counters->set('queueDepthGauge', $this->queue->size());
+
+            return new BookingResult(
+                '',
+                BookingStatus::Failed,
+                false,
+                $this->clock->now() - $startedAt,
+                0,
+                0,
+                'queue is full',
+            );
+        }
+
         $booking = $this->workflow->submit($request);
         $job = new BookingJob($booking->id, $index, $startedAt, 0);
 
         if (!$this->queue->enqueue($job)) {
             $this->counters->increment('bookingsRejectedByQueue');
+            $this->store->save($booking->withStatus(BookingStatus::Failed, $this->clock->now()));
 
             return new BookingResult(
                 $booking->id,
-                BookingStatus::Pending,
+                BookingStatus::Failed,
                 false,
                 $this->clock->now() - $startedAt,
                 0,
