@@ -242,7 +242,7 @@ benchmark suites, the dated decision record, phases 0–9 and the absence of
 
 **Commit:** `14854eb` (`docs: document the architecture, decisions and measurements`).
 
-## 10. Phase 7 — Release `v1.0.0` ⏳
+## 10. Phase 7 — Release `v1.0.0` ✅
 
 - Create the public repository `Researcher86/architecture-decision-lab`.
 - Push the commits and wait for green CI.
@@ -254,9 +254,21 @@ benchmark suites, the dated decision record, phases 0–9 and the absence of
 **Definition of done:** the repository is public, CI is green, the annotated tag
 exists, and the release notes link to the book.
 
-**Evidence:** to be filled after the release.
+**Evidence:**
 
-## 11. Phase 8 — The Russian book ⏳
+- Public repository:
+  [`Researcher86/architecture-decision-lab`](https://github.com/Researcher86/architecture-decision-lab).
+- CI run
+  [`40471843345`](https://github.com/Researcher86/architecture-decision-lab/actions/runs/40471843345)
+  is green at `9d5f521a9ff850d278b6d47b30d3d3f923604a85`.
+- Annotated tag `v1.0.0` (tag object `35afbaa452f0e2fce22967a1dd8891361b23fb02`)
+  points to the release commit `9d5f521a9ff850d278b6d47b30d3d3f923604a85`.
+- Release
+  [`v1.0.0`](https://github.com/Researcher86/architecture-decision-lab/releases/tag/v1.0.0)
+  lists the seven chapters, the scenario, checks, environment and limitations.
+- The tag is immutable for this manuscript; later work does not move it.
+
+## 11. Phase 8 — The Russian book ✅
 
 - Seven chapters in `book/architecture-decision-lab/`, one per decision.
 - Each chapter: problem, mechanism with exact excerpts, experiment, failure
@@ -270,9 +282,25 @@ exists, and the release notes link to the book.
 **Definition of done:** checker prints `ok` with zero failures; Book CI verifies
 the new book and still verifies the existing books.
 
-**Evidence:** to be filled after the book commit.
+**Evidence:**
 
-## 12. Phase 9 — Final synchronization ⏳
+- Book commit
+  `60e1c8f19a22bf88e983df55374d811759b93da6` (`docs: write the seven
+  Architecture Decision Lab chapters`) adds eight Markdown files: seven chapters
+  and the book README.
+- Prettier 3.6.2 formatted the files with `--prose-wrap always --print-width
+  80`; the checker was rerun afterwards.
+- Checker output from `book/architecture-decision-lab`:
+
+  ```text
+  chapters=7 code_blocks=74 linked=51 exact=51 links=51 resolved=51 unique_links=50 local_links=7 local_resolved=7
+  ok
+  ```
+
+- All 51 code blocks with a linked range are exact excerpts; all 51 GitHub
+  links resolve, including the seven local links in the book README.
+
+## 12. Phase 9 — Final synchronization ✅
 
 - Add the Architecture Decision Lab step to
   `book/.github/workflows/book.yml`.
@@ -285,20 +313,35 @@ the new book and still verifies the existing books.
 final report names the commits, tag, CI run ID, checker output and `make check`
 result.
 
-**Evidence:** to be filled at the end.
+**Evidence:**
+
+- Book CI commit
+  `caa8e363a389afa06935baa10d9ea085981c8bb4` (`ci: verify Architecture Decision
+  Lab book chapters`) adds one step to `book/.github/workflows/book.yml`; the
+  workflow still verifies PHP Systems Lab, Algorithms Lab and Architecture Lab.
+- The root `book/README.md` now lists Architecture Decision Lab as seven ready
+  chapters pinned to `v1.0.0`.
+- Book CI run
+  [`40473648882`](https://github.com/Researcher86/engineering-lab-book/actions/runs/40473648882)
+  is green at the full book commit `caa8e36`; the new chapter step passes
+  alongside the existing books.
+- Final `make check` in the project container: 74 tests, 3,468 assertions,
+  PHPStan level 8 clean over 124 files, PHP-CS-Fixer clean.
+- Final state: the lab is at `9d5f521`, the book is at `caa8e36`, both working
+  trees are clean, and `v1.0.0` still points to `9d5f521`.
 
 ---
 
 ## Commit map
 
-| Commit | Phase | Subject |
-|---|---|---|
-| `efc3cca` | 1 | `chore: scaffold the Docker-first PHP project` |
-| `cc20e76` | 2 | `feat: model trip booking, transport, saga, outbox and projections` |
-| `b37f303` | 3 | `feat: run the trip-booking scenario and traveler reports` |
-| `448e003` | 4 | `feat: add the seven chapter experiments` |
-| `87bc2f0` | 5 | `test: add the seven benchmark suites` |
-| `14854eb` | 6 | `docs: document the architecture, decisions and measurements` |
-| `TBD` | 7 | tag `v1.0.0` and GitHub release |
-| `TBD` | 8 | book chapters in the book repository |
-| `TBD` | 9 | final book CI and synchronization |
+| Commit | Repository | Phase | Subject |
+|---|---|---|---|
+| `efc3cca` | lab | 1 | `chore: scaffold the Docker-first PHP project` |
+| `cc20e76` | lab | 2 | `feat: model trip booking, transport, saga, outbox and projections` |
+| `b37f303` | lab | 3 | `feat: run the trip-booking scenario and traveler reports` |
+| `448e003` | lab | 4 | `feat: add the seven chapter experiments` |
+| `87bc2f0` | lab | 5 | `test: add the seven benchmark suites` |
+| `14854eb` | lab | 6 | `docs: document the architecture, decisions and measurements` |
+| `9d5f521` | lab | 7 | `docs: record the documentation phase`; tagged `v1.0.0` |
+| `60e1c8f` | book | 8 | `docs: write the seven Architecture Decision Lab chapters` |
+| `caa8e36` | book | 9 | `ci: verify Architecture Decision Lab book chapters` |
