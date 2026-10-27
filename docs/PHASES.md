@@ -327,8 +327,10 @@ result.
   alongside the existing books.
 - Final `make check` in the project container: 74 tests, 3,468 assertions,
   PHPStan level 8 clean over 124 files, PHP-CS-Fixer clean.
-- Final state: the lab is at `9d5f521`, the book is at `caa8e36`, both working
-  trees are clean, and `v1.0.0` still points to `9d5f521`.
+- At the book milestone the lab was at `9d5f521` and the book at `caa8e36`;
+  both working trees were clean, and `v1.0.0` still points to `9d5f521`. This
+  journal update is a later documentation-only commit; it does not change
+  runtime code or move the tag.
 
 ---
 
