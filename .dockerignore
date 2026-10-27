@@ -1,0 +1,11 @@
+vendor/
+var/databases/
+var/results/
+var/benchmarks/
+var/datasets/
+.phpunit.cache/
+.php-cs-fixer.cache
+.git/
+.github/
+.draft/
+.idea/
