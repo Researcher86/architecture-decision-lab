@@ -219,7 +219,7 @@ the numbers are quoted with their commit and environment.
 **Commit:** `87bc2f017532cd2576addc48b32cc5d3b158410f`
 (`test: add the seven benchmark suites`).
 
-## 9. Phase 6 — Documentation and docs tests 🚧
+## 9. Phase 6 — Documentation and docs tests ✅
 
 - `docs/ARCHITECTURE.md`: runtime assembly, boundaries, what is real and what
   is modeled.
@@ -234,7 +234,13 @@ the numbers are quoted with their commit and environment.
 **Definition of done:** `make test`, `make analyse` and `make format-check` are
 green; every local link in the README resolves; no document links to `master`.
 
-**Evidence:** to be filled after the documentation commit.
+**Evidence:** `make test` → 74 tests, 3,468 assertions; PHPStan level 8 clean;
+PHP-CS-Fixer clean. The docs test checks all six documents, the seven chapter
+names, the local README links, the benchmark environment block, the seven
+benchmark suites, the dated decision record, phases 0–9 and the absence of
+`master` links.
+
+**Commit:** `14854eb` (`docs: document the architecture, decisions and measurements`).
 
 ## 10. Phase 7 — Release `v1.0.0` ⏳
 
@@ -292,7 +298,7 @@ result.
 | `b37f303` | 3 | `feat: run the trip-booking scenario and traveler reports` |
 | `448e003` | 4 | `feat: add the seven chapter experiments` |
 | `87bc2f0` | 5 | `test: add the seven benchmark suites` |
-| `TBD` | 6 | `docs: document the architecture, decisions and measurements` |
+| `14854eb` | 6 | `docs: document the architecture, decisions and measurements` |
 | `TBD` | 7 | tag `v1.0.0` and GitHub release |
 | `TBD` | 8 | book chapters in the book repository |
 | `TBD` | 9 | final book CI and synchronization |
