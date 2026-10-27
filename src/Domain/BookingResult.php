@@ -23,6 +23,7 @@ final readonly class BookingResult
         public int $compensations,
         public string $reason = '',
         public array $lines = [],
+        public bool $eventPublished = true,
     ) {
     }
 
@@ -37,6 +38,7 @@ final readonly class BookingResult
             $this->compensations,
             $this->reason,
             $this->lines,
+            $this->eventPublished,
         );
     }
 }

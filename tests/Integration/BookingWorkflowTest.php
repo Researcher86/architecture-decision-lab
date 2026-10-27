@@ -90,6 +90,51 @@ final class BookingWorkflowTest extends LabTestCase
         self::assertSame(1, $lab->outbox->countPending());
     }
 
+    public function testDualWritePublishFailureLeavesAConfirmedBookingWithoutAnEvent(): void
+    {
+        $counters = new Counters();
+        $faults = new FaultInjector(step: 'dualwrite.publish', counters: $counters);
+        $lab = $this->lab(
+            $this->config(
+                transaction: TransactionMode::Saga,
+                delivery: \ArchitectureDecisionLab\Domain\DeliveryMode::DualWrite,
+            ),
+            $faults,
+            $counters,
+        );
+        $lab->seed('f1', 'h1', 'c1', capacity: 4);
+
+        $result = $lab->book($this->trip());
+
+        self::assertSame(BookingStatus::Confirmed, $result->status);
+        self::assertFalse($result->eventPublished);
+        self::assertSame(1, $lab->counters->get('eventPublishFailures'));
+        self::assertSame(0, $lab->projection->tripCount());
+        self::assertSame(0, $lab->outbox->countPending());
+    }
+
+    public function testDualWriteLostResponseStillCountsTheEventAsPublished(): void
+    {
+        $counters = new Counters();
+        $faults = new FaultInjector(step: 'dualwrite.publish', after: true, counters: $counters);
+        $lab = $this->lab(
+            $this->config(
+                transaction: TransactionMode::Saga,
+                delivery: \ArchitectureDecisionLab\Domain\DeliveryMode::DualWrite,
+            ),
+            $faults,
+            $counters,
+        );
+        $lab->seed('f1', 'h1', 'c1', capacity: 4);
+
+        $result = $lab->book($this->trip());
+
+        self::assertSame(BookingStatus::Confirmed, $result->status);
+        self::assertTrue($result->eventPublished);
+        self::assertSame(1, $lab->projection->tripCount());
+        self::assertSame(1, $lab->counters->get('eventPublishFailures'));
+    }
+
     public function testTwoPhaseCommitCrashLeavesHoldsAndRecoveryCanCommitThem(): void
     {
         $counters = new Counters();

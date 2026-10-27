@@ -94,15 +94,17 @@ final readonly class BookingWorkflow
 
     private function executeLocal(BookingRecord $booking, int $startedAt): BookingResult
     {
+        $eventPublished = false;
+
         try {
-            $lines = $this->store->transaction(function () use ($booking): array {
+            $lines = $this->store->transaction(function () use ($booking, &$eventPublished): array {
                 $lines = $this->reserveAll($booking->id);
-                $this->finalize($booking, BookingStatus::Confirmed, $lines);
+                $eventPublished = $this->finalize($booking, BookingStatus::Confirmed, $lines);
 
                 return $lines;
             });
         } catch (\Throwable $throwable) {
-            $this->finalize($booking, BookingStatus::Cancelled, [], $throwable->getMessage());
+            $eventPublished = $this->finalize($booking, BookingStatus::Cancelled, [], $throwable->getMessage());
 
             return new BookingResult(
                 $booking->id,
@@ -112,6 +114,8 @@ final readonly class BookingWorkflow
                 $this->clock->now() - $startedAt,
                 0,
                 $throwable->getMessage(),
+                [],
+                $eventPublished,
             );
         }
 
@@ -124,6 +128,7 @@ final readonly class BookingWorkflow
             0,
             '',
             $lines,
+            $eventPublished,
         );
     }
 
@@ -186,7 +191,7 @@ final readonly class BookingWorkflow
         $saga = $this->saga()->run($steps);
 
         if ($saga->success) {
-            $this->finalize($booking, BookingStatus::Confirmed, $lines);
+            $eventPublished = $this->finalize($booking, BookingStatus::Confirmed, $lines);
 
             return new BookingResult(
                 $booking->id,
@@ -197,11 +202,12 @@ final readonly class BookingWorkflow
                 0,
                 '',
                 $lines,
+                $eventPublished,
             );
         }
 
         $released = $this->released($lines);
-        $this->finalize($booking, BookingStatus::Cancelled, $released, $saga->reason);
+        $eventPublished = $this->finalize($booking, BookingStatus::Cancelled, $released, $saga->reason);
 
         return new BookingResult(
             $booking->id,
@@ -212,6 +218,7 @@ final readonly class BookingWorkflow
             $saga->compensationAttempts,
             $saga->reason,
             $released,
+            $eventPublished,
         );
     }
 
@@ -262,7 +269,7 @@ final readonly class BookingWorkflow
 
         /** @var list<BookingLine> $lines */
         if ($result->status === 'committed') {
-            $this->finalize($booking, BookingStatus::Confirmed, $lines);
+            $eventPublished = $this->finalize($booking, BookingStatus::Confirmed, $lines);
 
             return new BookingResult(
                 $booking->id,
@@ -273,12 +280,13 @@ final readonly class BookingWorkflow
                 0,
                 '',
                 $lines,
+                $eventPublished,
             );
         }
 
         if ($result->status === 'aborted') {
             $released = $this->released($lines);
-            $this->finalize($booking, BookingStatus::Cancelled, $released, $result->reason);
+            $eventPublished = $this->finalize($booking, BookingStatus::Cancelled, $released, $result->reason);
 
             return new BookingResult(
                 $booking->id,
@@ -289,6 +297,7 @@ final readonly class BookingWorkflow
                 count($result->aborted),
                 $result->reason,
                 $released,
+                $eventPublished,
             );
         }
 
@@ -303,6 +312,7 @@ final readonly class BookingWorkflow
             0,
             $result->reason,
             $lines,
+            false,
         );
     }
 
@@ -339,7 +349,7 @@ final readonly class BookingWorkflow
         $result = $coordinator->recover($participants, $decision);
 
         if ($decision === 'commit') {
-            $this->finalize($booking, BookingStatus::Confirmed, $lines);
+            $eventPublished = $this->finalize($booking, BookingStatus::Confirmed, $lines);
 
             return new BookingResult(
                 $booking->id,
@@ -350,11 +360,12 @@ final readonly class BookingWorkflow
                 0,
                 '',
                 $lines,
+                $eventPublished,
             );
         }
 
         $released = $this->released($lines);
-        $this->finalize($booking, BookingStatus::Cancelled, $released, 'recovered abort');
+        $eventPublished = $this->finalize($booking, BookingStatus::Cancelled, $released, 'recovered abort');
 
         return new BookingResult(
             $booking->id,
@@ -365,6 +376,7 @@ final readonly class BookingWorkflow
             count($result->aborted),
             'recovered abort',
             $released,
+            $eventPublished,
         );
     }
 
@@ -390,9 +402,9 @@ final readonly class BookingWorkflow
     {
         try {
             $lines = $this->reserveAll($booking->id);
-            $this->finalize($booking, BookingStatus::Confirmed, $lines);
+            $eventPublished = $this->finalize($booking, BookingStatus::Confirmed, $lines);
         } catch (\Throwable $throwable) {
-            $this->finalize($booking, BookingStatus::Failed, [], $throwable->getMessage());
+            $eventPublished = $this->finalize($booking, BookingStatus::Failed, [], $throwable->getMessage());
 
             return new BookingResult(
                 $booking->id,
@@ -402,6 +414,8 @@ final readonly class BookingWorkflow
                 $this->clock->now() - $startedAt,
                 0,
                 $throwable->getMessage(),
+                [],
+                $eventPublished,
             );
         }
 
@@ -414,6 +428,7 @@ final readonly class BookingWorkflow
             0,
             '',
             $lines,
+            $eventPublished,
         );
     }
 
@@ -448,8 +463,10 @@ final readonly class BookingWorkflow
 
     /**
      * @param list<BookingLine> $lines
+     *
+     * @return bool whether the outcome event is durably recorded or delivered
      */
-    private function finalize(BookingRecord $booking, BookingStatus $status, array $lines, string $reason = ''): void
+    private function finalize(BookingRecord $booking, BookingStatus $status, array $lines, string $reason = ''): bool
     {
         $now = $this->clock->now();
         $record = $booking->withStatus($status, $now)->withLines($lines, $now);
@@ -461,7 +478,7 @@ final readonly class BookingWorkflow
                 $this->counters->increment('bookingsFailed');
             }
 
-            return;
+            return false;
         }
 
         $event = new EventEnvelope(
@@ -479,14 +496,26 @@ final readonly class BookingWorkflow
 
         if ($this->delivery === DeliveryMode::Outbox) {
             $this->store->save($record, $event);
-        } else {
-            $this->store->save($record);
+            $this->counters->increment($status === BookingStatus::Confirmed ? 'bookingsConfirmed' : 'bookingsCancelled');
+
+            return true;
+        }
+
+        $this->store->save($record);
+        $delivered = false;
+
+        try {
             $this->faults->before('dualwrite.publish');
             $this->bus->publish($event);
+            $delivered = true;
             $this->faults->after('dualwrite.publish');
+        } catch (\Throwable) {
+            $this->counters->increment('eventPublishFailures');
         }
 
         $this->counters->increment($status === BookingStatus::Confirmed ? 'bookingsConfirmed' : 'bookingsCancelled');
+
+        return $delivered;
     }
 
     /**
