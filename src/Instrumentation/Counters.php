@@ -33,6 +33,15 @@ final class Counters
         $this->increment($name, $by);
     }
 
+    /**
+     * Set a gauge such as queue depth. A gauge is a current value, not an
+     * accumulated count; reports still print it in the same measurement block.
+     */
+    public function set(string $name, int $value): void
+    {
+        $this->values[$name] = $value;
+    }
+
     public function get(string $name): int
     {
         return $this->values[$name] ?? 0;
