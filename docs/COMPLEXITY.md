@@ -68,8 +68,11 @@ crossing the service boundary; the 8.13 ms is logical time (roughly four calls a
 2 ms per booking, with 122 calls across 30 bookings including the failed booking
 and its compensations), not measured network time. The SQL counts include schema
 creation, seeding and all 30 bookings; they are not a per-booking query count.
-The microservice count is slightly lower because the per-service schema creates
-fewer objects in the shared file, not because the booking path is cheaper.
+The microservice count is lower because of the booking path, not the schema: the
+local path re-reads the booking before reserving (`reserveAll()` calls
+`store->get()`, two queries) and the saga does not, so a confirmed booking costs
+33 queries locally and 31 under the saga. The failed booking's compensations
+take back 9 of the 58 saved: 1,012 - 963 = 49.
 
 ### Sync vs async (50 bookings, two workers, queue limit 50)
 
